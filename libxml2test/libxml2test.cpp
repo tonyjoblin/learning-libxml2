@@ -49,7 +49,7 @@ void streamFile(const string& filename) {
 
 int main()
 {
-    string fileName = R"(D:\Archives\20160530020814_v7.xml)";
+    string fileName = R"(..\data\small_timetable.xml)";
 
     streamFile(fileName);
 
