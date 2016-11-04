@@ -5,6 +5,7 @@
 
 #include <string>
 #include <iostream>
+#include <memory>
 
 #include <libxml/xmlreader.h>
 
@@ -16,11 +17,37 @@ void DisplayLocalName(xmlTextReaderPtr reader) {
     xmlFree(name);
 }
 
+string GetAttribute(xmlTextReaderPtr reader, const string& name)
+{
+    xmlChar* value = xmlTextReaderGetAttribute(reader, (xmlChar*)name.c_str());
+    string attributeValue((char*)value);
+    xmlFree(value);
+    return std::move(attributeValue);
+}
+
+shared_ptr<xmlChar> GetLocalName(xmlTextReaderPtr reader)
+{
+    shared_ptr<xmlChar> name(xmlTextReaderLocalName(reader), xmlFree);
+    return std::move(name);
+}
+
+bool IsJourneyElement(xmlTextReaderPtr reader)
+{
+    auto name = GetLocalName(reader);
+    return strncmp("Journey", (const char*)(name.get()), 7) == 0;
+}
+
 void processNode(xmlTextReaderPtr reader) {
     const int nodeType = xmlTextReaderNodeType(reader);
     switch (nodeType) {
     case XML_READER_TYPE_ELEMENT:
-        DisplayLocalName(reader);
+        if (IsJourneyElement(reader))
+        {
+            const string rid = GetAttribute(reader, "rid");
+            const string uid = GetAttribute(reader, "uid");
+            const string ssd = GetAttribute(reader, "ssd");
+            cout << rid << "|" << ssd << "|" << uid << endl;
+        }
         break;
     };
 }
