@@ -68,6 +68,8 @@ artifacts/
 *.pidb
 *.svclog
 *.scc
+*.o
+*.gch
 
 # Chutzpah Test files
 _Chutzpah*
@@ -243,3 +245,6 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
+
+parse_timetable
+

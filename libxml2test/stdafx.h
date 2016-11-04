@@ -3,13 +3,22 @@
 // are changed infrequently
 //
 
-#pragma once
+#ifndef __STDAFX_H__
+#define __STDAFX_H__
 
+#ifdef WIN32
+#pragma once
+#endif
+
+#ifdef WIN32
 #include "targetver.h"
+#endif
 
 #include <stdio.h>
-#include <tchar.h>
 
+#ifdef WIN32
+#include <tchar.h>
+#endif
 
 
 // TODO: reference additional headers your program requires here
@@ -19,3 +28,5 @@
 #include <memory>
 
 #include <libxml/xmlreader.h>
+
+#endif

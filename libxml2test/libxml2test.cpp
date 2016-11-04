@@ -3,6 +3,8 @@
 
 #include "stdafx.h"
 
+#include <cstring>
+
 #include <string>
 #include <iostream>
 #include <memory>
@@ -74,10 +76,15 @@ void streamFile(const string& filename) {
     }
 }
 
-int main()
+int main(int argc, char* argv[])
 {
-    string fileName = R"(..\data\small_timetable.xml)";
-
+    if (argc != 2) {
+        cerr << "Error, timetable file not specified." << endl;
+        return 1;
+    }
+    
+    string fileName = argv[1];
+    
     streamFile(fileName);
 
     return 0;
