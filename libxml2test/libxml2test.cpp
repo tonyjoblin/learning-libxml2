@@ -13,30 +13,35 @@
 
 using namespace std;
 
-void DisplayLocalName(xmlTextReaderPtr reader) {
-    auto name = xmlTextReaderLocalName(reader);
-    cout << name << endl;
-    xmlFree(name);
-}
-
-string GetAttribute(xmlTextReaderPtr reader, const string& name)
-{
-    xmlChar* value = xmlTextReaderGetAttribute(reader, (xmlChar*)name.c_str());
-    string attributeValue((char*)value);
-    xmlFree(value);
-    return std::move(attributeValue);
-}
-
 shared_ptr<xmlChar> GetLocalName(xmlTextReaderPtr reader)
 {
     shared_ptr<xmlChar> name(xmlTextReaderLocalName(reader), xmlFree);
     return std::move(name);
 }
 
+shared_ptr<xmlChar> GetAttribute(xmlTextReaderPtr reader, const string& name)
+{
+    shared_ptr<xmlChar> value(xmlTextReaderGetAttribute(reader, (xmlChar*)name.c_str()), xmlFree);
+    return std::move(value);
+}
+
+//string GetAttribute(xmlTextReaderPtr reader, const string& name)
+//{
+//    xmlChar* value = xmlTextReaderGetAttribute(reader, (xmlChar*)name.c_str());
+//    string attributeValue((char*)value);
+//    xmlFree(value);
+//    return std::move(attributeValue);
+//}
+
+void DisplayLocalName(xmlTextReaderPtr reader) {
+    auto name = GetLocalName(reader);
+    cout << name << endl;
+}
+
 bool IsJourneyElement(xmlTextReaderPtr reader)
 {
     auto name = GetLocalName(reader);
-    return strncmp("Journey", (const char*)(name.get()), 7) == 0;
+    return xmlStrncmp(BAD_CAST "Journey", name.get(), 7) == 0;
 }
 
 void processNode(xmlTextReaderPtr reader) {
@@ -45,9 +50,9 @@ void processNode(xmlTextReaderPtr reader) {
     case XML_READER_TYPE_ELEMENT:
         if (IsJourneyElement(reader))
         {
-            const string rid = GetAttribute(reader, "rid");
-            const string uid = GetAttribute(reader, "uid");
-            const string ssd = GetAttribute(reader, "ssd");
+            auto rid = GetAttribute(reader, "rid");
+            auto uid = GetAttribute(reader, "uid");
+            auto ssd = GetAttribute(reader, "ssd");
             cout << rid << "|" << ssd << "|" << uid << endl;
         }
         break;
