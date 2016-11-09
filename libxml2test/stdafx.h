@@ -29,6 +29,7 @@
 #include <memory>
 #include <iomanip>
 #include <sstream>
+#include <fstream>
 
 #include <libxml/xmlreader.h>
 

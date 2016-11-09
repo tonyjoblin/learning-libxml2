@@ -10,6 +10,7 @@
 #include <memory>
 #include <iomanip>
 #include <sstream>
+#include <fstream>
 
 #include <libxml/xmlreader.h>
 
@@ -84,7 +85,7 @@ public:
     time_t      lastPassingTime;
 };
 
-StateDataType ProcessJourneyStartElement(xmlTextReaderPtr& reader, const StateDataType currentState) {
+StateDataType ProcessJourneyStartElement(xmlTextReaderPtr& reader, const StateDataType& currentState) {
     auto rid = GetAttribute(reader, "rid");
     auto uid = GetAttribute(reader, "uid");
     auto ssd = GetAttribute(reader, "ssd");
@@ -94,16 +95,16 @@ StateDataType ProcessJourneyStartElement(xmlTextReaderPtr& reader, const StateDa
     nextState.tripSsd = ssd;
     nextState.tripUid = uid;
     nextState.state = LookingForDeparture;
-    return nextState;
+    return std::move(nextState);
 }
 
-time_t AdjustStopsPastMidnight(time_t stopTime, time_t lastPassingTime) {
-    const int tenHours = 10 * 60 * 60;
-    const int twentyFourHours = 24 * 60 * 60;
+time_t AdjustStopsPastMidnight(const time_t& stopTime, const time_t& lastPassingTime) {
+    static const int tenHours = 10 * 60 * 60;
+    static const int twentyFourHours = 24 * 60 * 60;
     if (stopTime + tenHours < lastPassingTime) {
         return stopTime + twentyFourHours;
     }
-    return stopTime;
+    return std::move(stopTime);
 }
 
 time_t GetTime(const pstring& tripDate, const pstring& stopTime) {
@@ -145,15 +146,15 @@ pstring GetStopTiploc(xmlTextReaderPtr& reader) {
     return std::move(GetAttribute(reader, "ftl"));
 }
 
-StateDataType ProcessNextEvent(xmlTextReaderPtr& reader, const StateDataType currentState);
+StateDataType ProcessNextEvent(xmlTextReaderPtr& reader, const StateDataType& currentState, ostream& output);
 
-StateDataType LookingForJourneyStateHandler(xmlTextReaderPtr& reader, const StateDataType currentState) {
+StateDataType LookingForJourneyStateHandler(xmlTextReaderPtr& reader, const StateDataType& currentState) {
     const int nodeType = xmlTextReaderNodeType(reader);
     switch (nodeType) {
     case StartElement:
         if (IsJourneyElement(reader))
         {
-            return ProcessJourneyStartElement(reader, currentState);
+            return std::move(ProcessJourneyStartElement(reader, currentState));
         }
         return currentState;
         break;
@@ -161,7 +162,7 @@ StateDataType LookingForJourneyStateHandler(xmlTextReaderPtr& reader, const Stat
         break;
     };
     StateDataType nextState(currentState);
-    return nextState;
+    return std::move(nextState);
 }
 
 enum TripStopType {
@@ -174,14 +175,14 @@ enum TripStopType {
 
 TripStopType GetTripStopType(xmlTextReaderPtr& reader) {
     auto name = GetLocalName(reader);
-    if (xmlStrncmp(BAD_CAST "OR", name.get(), 2) == 0) {
-        return OR;
-    }
-    else if (xmlStrncmp(BAD_CAST "IP", name.get(), 2) == 0) {
+    if (xmlStrncmp(BAD_CAST "IP", name.get(), 2) == 0) {
         return IP;
     }
     else if (xmlStrncmp(BAD_CAST "PP", name.get(), 2) == 0) {
         return PP;
+    }
+    else if (xmlStrncmp(BAD_CAST "OR", name.get(), 2) == 0) {
+        return OR;
     }
     else if (xmlStrncmp(BAD_CAST "DT", name.get(), 2) == 0) {
         return DT;
@@ -189,11 +190,17 @@ TripStopType GetTripStopType(xmlTextReaderPtr& reader) {
     return Unknown;
 }
 
-StateDataType LookingForDepatureProcessStop(xmlTextReaderPtr& reader, const StateDataType currentState) {
-    boost::optional<time_t> departureTime = GetDepartureTime(reader, currentState.tripSsd, currentState.lastPassingTime);
+StateDataType LookingForDepatureProcessStop(
+    xmlTextReaderPtr& reader,
+    const StateDataType& currentState
+) {
+    boost::optional<time_t> departureTime
+        = GetDepartureTime(reader, currentState.tripSsd, currentState.lastPassingTime);
+
     if (departureTime == boost::none) {
         return currentState;
     }
+
     StateDataType nextState(currentState);
     nextState.lastBoardingTime = *departureTime;
     nextState.lastPassingTime = *departureTime;
@@ -213,6 +220,7 @@ string FormatTimet(time_t t) {
 }
 
 void PrintConnectionInformation(
+    ostream&       output,
     const time_t   departureTime,
     const pstring& origin,
     const time_t   arrivalTime,
@@ -221,7 +229,7 @@ void PrintConnectionInformation(
     const pstring& tripUid
 ) {
     const char s = '|';
-    cout
+    output
         << departureTime << s
         << origin << s
         << arrivalTime << s
@@ -230,13 +238,18 @@ void PrintConnectionInformation(
         << tripUid << endl;
 }
 
-StateDataType LookingForArrivalProcessStop(xmlTextReaderPtr& reader, const StateDataType currentState) {
+StateDataType LookingForArrivalProcessStop(
+    xmlTextReaderPtr& reader,
+    const StateDataType& currentState,
+    ostream& output
+) {
     boost::optional<time_t> arrivalTime = GetArrivalTime(reader, currentState.tripSsd, currentState.lastPassingTime);
     if (arrivalTime == boost::none) {
         return currentState;
     }
     pstring stopTiploc = GetStopTiploc(reader);
     PrintConnectionInformation(
+        output,
         currentState.lastBoardingTime,
         currentState.lastStationTiploc,
         *arrivalTime,
@@ -247,10 +260,10 @@ StateDataType LookingForArrivalProcessStop(xmlTextReaderPtr& reader, const State
     StateDataType nextState(currentState);
     nextState.lastPassingTime = *arrivalTime;
     nextState.state = LookingForDeparture;
-    return std::move(ProcessNextEvent(reader, nextState));
+    return std::move(ProcessNextEvent(reader, nextState, output));
 }
 
-StateDataType UpdatePassingTime(xmlTextReaderPtr& reader, const StateDataType currentState) {
+StateDataType UpdatePassingTime(xmlTextReaderPtr& reader, const StateDataType& currentState) {
     boost::optional<time_t> passingTime = GetPassingTime(reader, currentState.tripSsd, currentState.lastPassingTime);
     if (passingTime == boost::none) {
         return currentState;
@@ -260,7 +273,7 @@ StateDataType UpdatePassingTime(xmlTextReaderPtr& reader, const StateDataType cu
     return std::move(nextState);
 }
 
-StateDataType LookingForDepartureHandler(xmlTextReaderPtr& reader, const StateDataType currentState) {
+StateDataType LookingForDepartureHandler(xmlTextReaderPtr& reader, const StateDataType& currentState) {
     const int nodeType = xmlTextReaderNodeType(reader);
     switch (nodeType) {
     case EndElement:
@@ -268,7 +281,7 @@ StateDataType LookingForDepartureHandler(xmlTextReaderPtr& reader, const StateDa
         {
             StateDataType nextState(currentState);
             nextState.state = LookingForJourney;
-            return nextState;
+            return std::move(nextState);
         }
         break;
     case StartElement: {
@@ -277,10 +290,10 @@ StateDataType LookingForDepartureHandler(xmlTextReaderPtr& reader, const StateDa
             case OR:
             case IP:
             case DT:
-                return LookingForDepatureProcessStop(reader, currentState);
+                return std::move(LookingForDepatureProcessStop(reader, currentState));
                 break;
             case PP:
-                return UpdatePassingTime(reader, currentState);
+                return std::move(UpdatePassingTime(reader, currentState));
                 break;
             default:
                 break;
@@ -293,7 +306,11 @@ StateDataType LookingForDepartureHandler(xmlTextReaderPtr& reader, const StateDa
     return currentState;
 }
 
-StateDataType LookingForArrivalHandler(xmlTextReaderPtr& reader, const StateDataType currentState) {
+StateDataType LookingForArrivalHandler(
+    xmlTextReaderPtr& reader,
+    const StateDataType& currentState,
+    ostream& output
+) {
     const int nodeType = xmlTextReaderNodeType(reader);
     switch (nodeType) {
     case EndElement:
@@ -301,7 +318,7 @@ StateDataType LookingForArrivalHandler(xmlTextReaderPtr& reader, const StateData
         {
             StateDataType nextState(currentState);
             nextState.state = LookingForJourney;
-            return nextState;
+            return std::move(nextState);
         }
         break;
     case StartElement: {
@@ -310,7 +327,7 @@ StateDataType LookingForArrivalHandler(xmlTextReaderPtr& reader, const StateData
         case OR:
         case IP:
         case DT:
-            return LookingForArrivalProcessStop(reader, currentState);
+            return LookingForArrivalProcessStop(reader, currentState, output);
             break;
         case PP:
             return UpdatePassingTime(reader, currentState);
@@ -326,16 +343,20 @@ StateDataType LookingForArrivalHandler(xmlTextReaderPtr& reader, const StateData
     return currentState;
 }
 
-StateDataType ProcessNextEvent(xmlTextReaderPtr& reader, const StateDataType currentState) {
+StateDataType ProcessNextEvent(
+    xmlTextReaderPtr& reader,
+    const StateDataType& currentState,
+    ostream& output
+) {
     switch (currentState.state) {
     case LookingForJourney:
-        return LookingForJourneyStateHandler(reader, currentState);
+        return std::move(LookingForJourneyStateHandler(reader, currentState));
         break;
     case LookingForDeparture:
-        return LookingForDepartureHandler(reader, currentState);
+        return std::move(LookingForDepartureHandler(reader, currentState));
         break;
     case LookingForArrival:
-        return LookingForArrivalHandler(reader, currentState);
+        return std::move(LookingForArrivalHandler(reader, currentState, output));
         break;
     default:
         cerr << "Error: Unhandled state" << currentState.state << endl;
@@ -343,19 +364,19 @@ StateDataType ProcessNextEvent(xmlTextReaderPtr& reader, const StateDataType cur
     }
 }
 
-StateDataType DebugProcessNextEvent(xmlTextReaderPtr& reader, const StateDataType currentState) {
-    const int nodeType = xmlTextReaderNodeType(reader);
-    auto name = GetLocalName(reader);
-    if (name != nullptr) {
-        cout << name << " " << nodeType << endl;
-    }
-    else {
-        cout << nodeType << endl;
-    }
-    return currentState;
-}
+//StateDataType DebugProcessNextEvent(xmlTextReaderPtr& reader, const StateDataType currentState) {
+//    const int nodeType = xmlTextReaderNodeType(reader);
+//    auto name = GetLocalName(reader);
+//    if (name != nullptr) {
+//        cout << name << " " << nodeType << endl;
+//    }
+//    else {
+//        cout << nodeType << endl;
+//    }
+//    return currentState;
+//}
 
-void streamFile(const string& filename) {
+void streamFile(const string& filename, ostream& output) {
 
     xmlTextReaderPtr reader;
     int ret;
@@ -368,7 +389,7 @@ void streamFile(const string& filename) {
     if (reader != NULL) {
         ret = xmlTextReaderRead(reader);
         while (ret == 1) {
-            state = ProcessNextEvent(reader, state);
+            state = ProcessNextEvent(reader, state, output);
             ret = xmlTextReaderRead(reader);
         }
         xmlFreeTextReader(reader);
@@ -383,14 +404,17 @@ void streamFile(const string& filename) {
 
 int main(int argc, char* argv[])
 {
-    if (argc != 2) {
-        cerr << "Error, timetable file not specified." << endl;
+    if (argc != 3) {
+        cerr << "Usage libxml2test.exe inputfile outputfile" << endl;
         return 1;
     }
     
     string fileName = argv[1];
     
-    streamFile(fileName);
+    ofstream output;
+    output.open(argv[2]);
+    streamFile(fileName, output);
+    output.close();
 
     return 0;
 }
