@@ -23,10 +23,15 @@
 
 // TODO: reference additional headers your program requires here
 
+#include <cstring>
 #include <string>
 #include <iostream>
 #include <memory>
+#include <iomanip>
+#include <sstream>
 
 #include <libxml/xmlreader.h>
+
+#include <boost/optional.hpp>
 
 #endif
