@@ -156,7 +156,6 @@ StateDataType LookingForJourneyStateHandler(xmlTextReaderPtr& reader, const Stat
         {
             return std::move(ProcessJourneyStartElement(reader, currentState));
         }
-        return currentState;
         break;
     default:
         break;
@@ -380,7 +379,7 @@ StateDataType ProcessNextEvent(
 //    return currentState;
 //}
 
-void streamFile(const string& filename, ostream& output) {
+void parseTimetableFile(const string& filename, ostream& output) {
 
     xmlTextReaderPtr reader;
     int ret;
@@ -412,7 +411,7 @@ int main(int argc, char* argv[])
     }
     
     string fileName = argv[1];
-    streamFile(fileName, cout);
+    parseTimetableFile(fileName, cout);
 
     return 0;
 }
