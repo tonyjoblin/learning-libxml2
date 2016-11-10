@@ -209,12 +209,12 @@ StateDataType LookingForDepatureProcessStop(
     return std::move(nextState);
 }
 
-string FormatTimet(time_t t) {
+string FormatTime(time_t t) {
     char buffer[20];
     struct tm tm;
     memset(&tm, 0, sizeof(struct tm));
     localtime_s(&tm, &t);
-    strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", &tm);
+    strftime(buffer, 20, "%Y-%m-%d %H:%M", &tm);
     string time = buffer;
     return std::move(time);
 }
@@ -230,9 +230,9 @@ void PrintConnectionInformation(
 ) {
     const char s = '|';
     output
-        << departureTime << s
+        << FormatTime(departureTime) << s
         << origin << s
-        << arrivalTime << s
+        << FormatTime(arrivalTime) << s
         << destination << s
         << tripRid << s
         << tripUid << endl;
@@ -273,15 +273,21 @@ StateDataType UpdatePassingTime(xmlTextReaderPtr& reader, const StateDataType& c
     return std::move(nextState);
 }
 
+StateDataType CreateLookingForJourneyState()
+{
+    StateDataType nextState;
+    nextState.state = LookingForJourney;
+    nextState.lastPassingTime = 0;
+    return std::move(nextState);
+}
+
 StateDataType LookingForDepartureHandler(xmlTextReaderPtr& reader, const StateDataType& currentState) {
     const int nodeType = xmlTextReaderNodeType(reader);
     switch (nodeType) {
     case EndElement:
         if (IsJourneyElement(reader))
         {
-            StateDataType nextState(currentState);
-            nextState.state = LookingForJourney;
-            return std::move(nextState);
+            return std::move(CreateLookingForJourneyState());
         }
         break;
     case StartElement: {
@@ -316,9 +322,7 @@ StateDataType LookingForArrivalHandler(
     case EndElement:
         if (IsJourneyElement(reader))
         {
-            StateDataType nextState(currentState);
-            nextState.state = LookingForJourney;
-            return std::move(nextState);
+            return std::move(CreateLookingForJourneyState());
         }
         break;
     case StartElement: {
@@ -381,9 +385,7 @@ void streamFile(const string& filename, ostream& output) {
     xmlTextReaderPtr reader;
     int ret;
 
-    StateDataType state;
-    state.state = LookingForJourney;
-    state.lastPassingTime = 0;
+    StateDataType state = CreateLookingForJourneyState();
 
     reader = xmlNewTextReaderFilename(filename.c_str());
     if (reader != NULL) {
@@ -404,17 +406,13 @@ void streamFile(const string& filename, ostream& output) {
 
 int main(int argc, char* argv[])
 {
-    if (argc != 3) {
-        cerr << "Usage libxml2test.exe inputfile outputfile" << endl;
+    if (argc != 2) {
+        cerr << "Usage parse_timetable.exe timetable.xml" << endl;
         return 1;
     }
     
     string fileName = argv[1];
-    
-    ofstream output;
-    output.open(argv[2]);
-    streamFile(fileName, output);
-    output.close();
+    streamFile(fileName, cout);
 
     return 0;
 }
