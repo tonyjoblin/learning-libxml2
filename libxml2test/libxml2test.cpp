@@ -16,34 +16,9 @@
 
 #include <boost/optional.hpp>
 
+#include "xmlutils.h"
+
 using namespace std;
-
-typedef shared_ptr<xmlChar> pstring;
-
-pstring GetLocalName(xmlTextReaderPtr& reader)
-{
-    shared_ptr<xmlChar> name(xmlTextReaderLocalName(reader), xmlFree);
-    return std::move(name);
-}
-
-// May return null
-pstring GetAttribute(xmlTextReaderPtr& reader, const string& name)
-{
-    pstring value(xmlTextReaderGetAttribute(reader, (xmlChar*)name.c_str()), xmlFree);
-    return std::move(value);
-}
-
-// May return null
-pstring GetAttribute(xmlTextReaderPtr& reader, const char* name)
-{
-    pstring value(xmlTextReaderGetAttribute(reader, BAD_CAST name), xmlFree);
-    return std::move(value);
-}
-
-void DisplayLocalName(xmlTextReaderPtr& reader) {
-    auto name = GetLocalName(reader);
-    cout << name << endl;
-}
 
 bool IsJourneyElement(xmlTextReaderPtr& reader)
 {
@@ -55,22 +30,6 @@ enum StatesType {
     LookingForJourney,
     LookingForDeparture,
     LookingForArrival
-};
-
-enum NodeTypes {
-    StartElement = 1,
-    Attribute = 2,
-    Text = 3,
-    CDate = 4,
-    EntityRef = 5,
-    EntityDecl = 6,
-    ProcessingInstruction = 7,
-    Comment = 8,
-    Document = 9,
-    Dtd = 10,
-    DocumentFragment = 11,
-    Notation = 12,
-    EndElement = 15
 };
 
 struct StateDataType
@@ -366,18 +325,6 @@ StateDataType ProcessNextEvent(
         exit(1);
     }
 }
-
-//StateDataType DebugProcessNextEvent(xmlTextReaderPtr& reader, const StateDataType currentState) {
-//    const int nodeType = xmlTextReaderNodeType(reader);
-//    auto name = GetLocalName(reader);
-//    if (name != nullptr) {
-//        cout << name << " " << nodeType << endl;
-//    }
-//    else {
-//        cout << nodeType << endl;
-//    }
-//    return currentState;
-//}
 
 void parseTimetableFile(const string& filename, ostream& output) {
 
