@@ -249,3 +249,6 @@ ModelManifest.xml
 parse_timetable
 
 aqtime/*
+
+data/*
+connections.txt
