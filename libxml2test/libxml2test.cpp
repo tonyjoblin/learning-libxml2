@@ -169,10 +169,15 @@ StateDataType LookingForDepatureProcessStop(
 
 string FormatTime(time_t t) {
     char buffer[20];
+#ifdef WIN32
     struct tm tm;
     memset(&tm, 0, sizeof(struct tm));
     localtime_s(&tm, &t);
     strftime(buffer, 20, "%Y-%m-%d %H:%M", &tm);
+#else
+    struct tm* tm = localtime(&t);
+    strftime(buffer, 20, "%Y-%m-%d %H:%M", tm);
+#endif
     string time = buffer;
     return std::move(time);
 }
