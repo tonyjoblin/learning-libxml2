@@ -5,6 +5,13 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libxml2test", "libxml2test\libxml2test.vcxproj", "{CBAD26C0-01C5-427F-AF1D-28C7A74A7253}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{AA64D81B-029C-4640-B72D-AF6B0038FA6E}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		Makefile = Makefile
+		README.md = README.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
