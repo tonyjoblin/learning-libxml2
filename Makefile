@@ -19,4 +19,4 @@ clean:
 	rm parse_timetable $(SDIR)/*.o $(SDIR)/*.gch
 
 test: parse_timetable
-	time ./parse_timetable $(TT)
+	time ./parse_timetable $(TT) connections.txt
